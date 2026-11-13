@@ -1,0 +1,12 @@
+flask==3.0.3
+flask-cors==4.0.1
+python-dotenv==1.0.1
+ibm-watsonx-ai==1.1.2
+langchain==0.2.16
+langchain-ibm==0.1.12
+langchain-community==0.2.16
+chromadb==0.5.5
+sentence-transformers==3.0.1
+numpy==1.26.4
+requests==2.32.3
+gunicorn==22.0.0

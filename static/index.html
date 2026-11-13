@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipe Preparation Agent — IBM Granite AI</title>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --surface2: #242740;
+      --border: #2e3155;
+      --text: #e8eaf6;
+      --muted: #9fa8da;
+      --accent: #5c6bc0;
+      --accent-light: #7986cb;
+      --accent-glow: rgba(92, 107, 192, 0.25);
+      --green: #4caf50;
+      --orange: #ff9800;
+      --red: #f44336;
+      --ibm-blue: #0f62fe;
+      --ibm-blue-light: #4589ff;
+      --granite: #a78bfa;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(135deg, #0d1b4b 0%, #1a237e 50%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--ibm-blue) 0%, var(--granite) 100%);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .brand-text h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #fff 0%, var(--granite) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .brand-text p {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .header-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .badge-ibm { background: rgba(15,98,254,0.2); color: var(--ibm-blue-light); border: 1px solid rgba(15,98,254,0.3); }
+    .badge-rag { background: rgba(167,139,250,0.15); color: var(--granite); border: 1px solid rgba(167,139,250,0.3); }
+    .badge-status {
+      background: rgba(76,175,80,0.15);
+      color: var(--green);
+      border: 1px solid rgba(76,175,80,0.3);
+      cursor: pointer;
+    }
+    .badge-status.offline { background: rgba(244,67,54,0.15); color: var(--red); border-color: rgba(244,67,54,0.3); }
+
+    /* ===== MAIN LAYOUT ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 20px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      width: 3px; height: 16px;
+      background: linear-gradient(to bottom, var(--ibm-blue), var(--granite));
+      border-radius: 2px;
+    }
+
+    /* ===== INGREDIENT INPUT ===== */
+    .ingredient-input-wrap {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    input[type="text"], select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]::placeholder { color: var(--muted); }
+    input[type="text"]:focus, select:focus { border-color: var(--accent-light); }
+    select option { background: var(--surface2); }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--ibm-blue) 0%, var(--accent) 100%);
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent-light); color: var(--text); }
+    .btn-danger { background: rgba(244,67,54,0.15); color: var(--red); border: 1px solid rgba(244,67,54,0.3); }
+    .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ===== INGREDIENT TAGS ===== */
+    .ingredient-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 16px;
+      min-height: 32px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px 4px 10px;
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+    .tag .tag-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 0.9rem;
+      display: inline-flex; align-items: center; padding: 0;
+      transition: color 0.15s;
+    }
+    .tag .tag-remove:hover { color: var(--red); }
+    .tag-hint { font-size: 0.78rem; color: var(--muted); margin-bottom: 14px; }
+
+    /* ===== PREFERENCES ===== */
+    .pref-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .pref-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    /* ===== SUBMIT BUTTON (full width) ===== */
+    .btn-submit {
+      width: 100%;
+      padding: 13px;
+      font-size: 0.95rem;
+      border-radius: var(--radius-sm);
+      justify-content: center;
+    }
+
+    /* ===== QUICK PICKS ===== */
+    .quick-section { margin-top: 20px; }
+    .quick-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
+    .quick-picks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .quick-pill {
+      background: rgba(92,107,192,0.1);
+      border: 1px solid rgba(92,107,192,0.25);
+      border-radius: 16px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .quick-pill:hover { background: rgba(92,107,192,0.2); color: var(--text); border-color: var(--accent-light); }
+
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: all 0.15s;
+      border-radius: 6px 6px 0 0;
+    }
+    .tab-btn.active { color: var(--ibm-blue-light); border-bottom-color: var(--ibm-blue-light); }
+    .tab-btn:hover:not(.active) { color: var(--text); background: var(--surface2); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== AI RESPONSE ===== */
+    .ai-response-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      position: relative;
+      min-height: 120px;
+    }
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--granite);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .ai-badge::before {
+      content: '';
+      width: 8px; height: 8px;
+      background: var(--granite);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .ai-text {
+      font-size: 0.9rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    /* ===== RECIPE CARDS ===== */
+    .recipe-cards { display: flex; flex-direction: column; gap: 16px; }
+    .recipe-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .recipe-card:hover { border-color: var(--accent); }
+    .recipe-card-header {
+      padding: 14px 16px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .recipe-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .recipe-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .meta-pill {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .meta-pill.match-high { border-color: rgba(76,175,80,0.4); color: var(--green); background: rgba(76,175,80,0.08); }
+    .meta-pill.match-mid { border-color: rgba(255,152,0,0.4); color: var(--orange); background: rgba(255,152,0,0.08); }
+    .meta-pill.match-low { border-color: rgba(244,67,54,0.4); color: var(--red); background: rgba(244,67,54,0.08); }
+    .recipe-card-body {
+      padding: 0 16px 16px;
+      display: none;
+      border-top: 1px solid var(--border);
+    }
+    .recipe-card-body.open { display: block; padding-top: 14px; }
+    .recipe-section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin: 14px 0 8px;
+    }
+    .ingredient-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .ing-tag {
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+    }
+    .ing-tag.have { background: rgba(76,175,80,0.12); color: var(--green); border: 1px solid rgba(76,175,80,0.3); }
+    .ing-tag.missing { background: rgba(244,67,54,0.1); color: #ef9a9a; border: 1px solid rgba(244,67,54,0.25); }
+    .instructions-list {
+      list-style: none;
+      counter-reset: step-counter;
+    }
+    .instructions-list li {
+      counter-increment: step-counter;
+      position: relative;
+      padding: 8px 0 8px 36px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid rgba(46,49,85,0.5);
+      color: #c5cae9;
+    }
+    .instructions-list li:last-child { border-bottom: none; }
+    .instructions-list li::before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px; height: 24px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700;
+      color: #fff;
+    }
+    .tips-box {
+      background: rgba(167,139,250,0.08);
+      border: 1px solid rgba(167,139,250,0.2);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.84rem;
+      color: #ce93d8;
+    }
+    .sub-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .sub-item {
+      background: var(--surface);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 0.8rem;
+    }
+    .sub-item strong { color: var(--muted); }
+    .nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .nut-box {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .nut-value { font-size: 1rem; font-weight: 700; color: var(--ibm-blue-light); }
+    .nut-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .recipe-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* ===== TOOLS PANEL ===== */
+    .tool-form { display: flex; flex-direction: column; gap: 12px; }
+    .tool-result {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-size: 0.88rem;
+      white-space: pre-wrap;
+      color: var(--text);
+      display: none;
+      line-height: 1.7;
+    }
+    .tool-result.visible { display: block; }
+
+    /* ===== LOADER ===== */
+    .loader-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 32px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .spinner {
+      width: 22px; height: 22px;
+      border: 2px solid var(--border);
+      border-top-color: var(--ibm-blue-light);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== EMPTY / PLACEHOLDER ===== */
+    .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 24px;
+      text-align: center;
+      gap: 10px;
+    }
+    .placeholder-icon { font-size: 3rem; margin-bottom: 4px; }
+    .placeholder h3 { font-size: 1rem; color: var(--text); }
+    .placeholder p { font-size: 0.84rem; color: var(--muted); max-width: 320px; }
+
+    /* ===== TOAST ===== */
+    .toast-wrap {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-size: 0.84rem;
+      color: var(--text);
+      animation: slideIn 0.3s ease;
+      max-width: 320px;
+    }
+    .toast.error { border-color: rgba(244,67,54,0.4); background: rgba(244,67,54,0.1); color: var(--red); }
+    .toast.success { border-color: rgba(76,175,80,0.4); background: rgba(76,175,80,0.08); color: var(--green); }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* ===== NOTICE BOX ===== */
+    .notice {
+      background: rgba(255,152,0,0.08);
+      border: 1px solid rgba(255,152,0,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      color: #ffcc80;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .notice a { color: #ffb74d; }
+
+    /* ===== STATUS CONFIG ===== */
+    .config-status { display: flex; flex-direction: column; gap: 8px; }
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .config-row:last-child { border-bottom: none; }
+    .config-key { color: var(--muted); }
+    .config-val { font-family: monospace; font-size: 0.78rem; }
+    .dot-green { color: var(--green); }
+    .dot-red { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================ HEADER -->
+<header>
+  <div class="header-brand">
+    <div class="logo-icon">🍳</div>
+    <div class="brand-text">
+      <h1>Recipe Preparation Agent</h1>
+      <p>Powered by IBM WatsonX Granite AI · RAG · ChromaDB</p>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-ibm">IBM Cloud Lite</span>
+    <span class="badge badge-rag">RAG Enabled</span>
+    <span class="badge badge-status" id="statusBadge" onclick="checkStatus()">● Connecting…</span>
+  </div>
+</header>
+
+<!-- ============================================================ MAIN -->
+<div class="container">
+
+  <!-- ============================================================ LEFT PANEL -->
+  <div>
+    <!-- Ingredient Input Card -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">🥕 Your Ingredients</div>
+
+      <div id="configNotice" class="notice" style="display:none;">
+        ⚠️ <strong>Setup required:</strong> IBM API key or WatsonX Project ID is not configured.
+        Open <code>.env</code> and add your credentials from
+        <a href="https://cloud.ibm.com/iam/apikeys" target="_blank">IBM Cloud IAM</a> and
+        <a href="https://dataplatform.cloud.ibm.com" target="_blank">WatsonX.ai</a>.
+        The RAG retrieval will still work — only AI generation requires credentials.
+      </div>
+
+      <div class="ingredient-input-wrap">
+        <input type="text" id="ingredientInput" placeholder="e.g. eggs, spinach, garlic…"
+          onkeydown="if(event.key==='Enter'||event.key===',')addIngredient()" />
+        <button class="btn btn-primary" onclick="addIngredient()">Add</button>
+      </div>
+
+      <div class="ingredient-tags" id="ingredientTags">
+        <!-- tags rendered here -->
+      </div>
+      <div class="tag-hint" id="tagHint">Press Enter or comma to add ingredients</div>
+
+      <!-- Preferences -->
+      <div class="pref-grid">
+        <div>
+          <div class="pref-label">Dietary</div>
+          <select id="prefDietary">
+            <option value="">Any</option>
+            <option value="vegetarian">Vegetarian</option>
+            <option value="vegan">Vegan</option>
+            <option value="gluten-free">Gluten-Free</option>
+            <option value="dairy-free">Dairy-Free</option>
+            <option value="keto-friendly">Keto</option>
+            <option value="high-protein">High Protein</option>
+          </select>
+        </div>
+        <div>
+          <div class="pref-label">Difficulty</div>
+          <select id="prefDifficulty">
+            <option value="">Any</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+          </select>
+        </div>
+        <div>
+          <div class="pref-label">Servings</div>
+          <select id="prefServings">
+            <option value="">Any</option>
+            <option value="1">1 person</option>
+            <option value="2">2 people</option>
+            <option value="3">3 people</option>
+            <option value="4">4 people</option>
+          </select>
+        </div>
+        <div>
+          <div class="pref-label">Max Time (mins)</div>
+          <select id="prefTime">
+            <option value="">Any</option>
+            <option value="20">20 min</option>
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">60 min</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-submit" id="submitBtn" onclick="submitQuery()">
+        🔍 Find Recipes with IBM Granite AI
+      </button>
+
+      <div class="quick-section">
+        <div class="quick-label">Quick ingredient sets:</div>
+        <div class="quick-picks">
+          <span class="quick-pill" onclick="loadPreset('pasta')">🍝 Pasta Night</span>
+          <span class="quick-pill" onclick="loadPreset('breakfast')">🍳 Breakfast</span>
+          <span class="quick-pill" onclick="loadPreset('indian')">🍛 Indian</span>
+          <span class="quick-pill" onclick="loadPreset('asian')">🥢 Asian</span>
+          <span class="quick-pill" onclick="loadPreset('healthy')">🥗 Healthy</span>
+          <span class="quick-pill" onclick="loadPreset('pantry')">🥫 Pantry Staples</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Config Status Card -->
+    <div class="card">
+      <div class="card-title">⚙️ Configuration</div>
+      <div class="config-status" id="configStatus">
+        <div style="color:var(--muted);font-size:0.82rem;">Loading config…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ RIGHT PANEL -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('results', this)">🤖 AI Suggestions</button>
+      <button class="tab-btn" onclick="switchTab('recipes', this)">📋 Retrieved Recipes</button>
+      <button class="tab-btn" onclick="switchTab('tools', this)">🛠️ Tools</button>
+    </div>
+
+    <!-- AI SUGGESTIONS TAB -->
+    <div class="tab-panel active" id="tab-results">
+      <div id="resultsContent">
+        <div class="placeholder">
+          <div class="placeholder-icon">🍽️</div>
+          <h3>Ready to cook something great?</h3>
+          <p>Add your available ingredients on the left and let IBM Granite AI find the perfect recipe for you.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RETRIEVED RECIPES TAB -->
+    <div class="tab-panel" id="tab-recipes">
+      <div id="recipesContent">
+        <div class="placeholder">
+          <div class="placeholder-icon">📚</div>
+          <h3>No recipes retrieved yet</h3>
+          <p>Submit your ingredients to see which recipes were retrieved from the knowledge base using RAG.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLS TAB -->
+    <div class="tab-panel" id="tab-tools">
+      <!-- Substitution Tool -->
+      <div style="margin-bottom:24px;">
+        <div class="card-title">🔄 Ingredient Substitution</div>
+        <div class="tool-form">
+          <div>
+            <div class="pref-label">Ingredient to replace</div>
+            <input type="text" id="subIngredient" placeholder="e.g. butter" />
+          </div>
+          <div>
+            <div class="pref-label">Recipe name</div>
+            <input type="text" id="subRecipeName" placeholder="e.g. Banana Oat Pancakes" />
+          </div>
+          <div>
+            <div class="pref-label">Context (optional)</div>
+            <input type="text" id="subContext" placeholder="e.g. making it vegan" />
+          </div>
+          <button class="btn btn-primary" onclick="getSubstitution()">Get Substitutions</button>
+          <div class="tool-result" id="subResult"></div>
+        </div>
+      </div>
+
+      <!-- Cooking Tips Tool -->
+      <div style="margin-bottom:24px;">
+        <div class="card-title">💡 Cooking Tips</div>
+        <div class="tool-form">
+          <div>
+            <div class="pref-label">Recipe name</div>
+            <input type="text" id="tipsRecipeName" placeholder="e.g. Spaghetti Aglio e Olio" />
+          </div>
+          <div>
+            <div class="pref-label">Technique (optional)</div>
+            <input type="text" id="tipsTechnique" placeholder="e.g. pasta water, garlic sautéing" />
+          </div>
+          <button class="btn btn-primary" onclick="getCookingTips()">Get Tips</button>
+          <div class="tool-result" id="tipsResult"></div>
+        </div>
+      </div>
+
+      <!-- Dietary Adjust Tool -->
+      <div>
+        <div class="card-title">🥗 Dietary Adjustment</div>
+        <div class="tool-form">
+          <div>
+            <div class="pref-label">Recipe ID</div>
+            <input type="text" id="adjRecipeId" placeholder="e.g. R001" />
+          </div>
+          <div>
+            <div class="pref-label">Dietary requirement</div>
+            <input type="text" id="adjDietary" placeholder="e.g. vegan, gluten-free" />
+          </div>
+          <button class="btn btn-primary" onclick="getDietaryAdjust()">Adjust Recipe</button>
+          <div class="tool-result" id="adjResult"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+  // =====================================================================
+  // STATE
+  // =====================================================================
+  let ingredients = [];
+  let lastResults = null;
+
+  const PRESETS = {
+    pasta: ['spaghetti', 'garlic', 'olive oil', 'parsley', 'red chili flakes'],
+    breakfast: ['eggs', 'banana', 'oats', 'milk', 'butter'],
+    indian: ['chickpeas', 'onion', 'tomatoes', 'garlic', 'ginger', 'cumin', 'turmeric'],
+    asian: ['cooked rice', 'eggs', 'carrots', 'peas', 'soy sauce', 'garlic'],
+    healthy: ['spinach', 'eggs', 'cheese', 'lemon juice', 'olive oil'],
+    pantry: ['rice', 'onion', 'garlic', 'canned tomatoes', 'olive oil', 'salt'],
+  };
+
+  // =====================================================================
+  // INGREDIENT MANAGEMENT
+  // =====================================================================
+  function addIngredient() {
+    const input = document.getElementById('ingredientInput');
+    let val = input.value.trim().replace(/,$/, '');
+    if (!val) return;
+    // Handle comma-separated
+    val.split(',').forEach(v => {
+      v = v.trim();
+      if (v && !ingredients.includes(v.toLowerCase())) {
+        ingredients.push(v.toLowerCase());
+      }
+    });
+    input.value = '';
+    renderTags();
+  }
+
+  function removeIngredient(ing) {
+    ingredients = ingredients.filter(i => i !== ing);
+    renderTags();
+  }
+
+  function renderTags() {
+    const wrap = document.getElementById('ingredientTags');
+    const hint = document.getElementById('tagHint');
+    wrap.innerHTML = ingredients.map(ing =>
+      `<span class="tag">🥦 ${ing}
+        <button class="tag-remove" onclick="removeIngredient('${ing}')">✕</button>
+      </span>`
+    ).join('');
+    hint.style.display = ingredients.length ? 'none' : 'block';
+  }
+
+  function loadPreset(key) {
+    ingredients = [...PRESETS[key]];
+    renderTags();
+  }
+
+  // =====================================================================
+  // SUBMIT
+  // =====================================================================
+  async function submitQuery() {
+    if (ingredients.length === 0) {
+      showToast('Add at least one ingredient first!', 'error');
+      return;
+    }
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Thinking with IBM Granite…';
+
+    const preferences = {};
+    const dietary = document.getElementById('prefDietary').value;
+    const difficulty = document.getElementById('prefDifficulty').value;
+    const servings = document.getElementById('prefServings').value;
+    const time = document.getElementById('prefTime').value;
+    if (dietary) preferences.dietary = [dietary];
+    if (difficulty) preferences.difficulty = difficulty;
+    if (servings) preferences.servings = parseInt(servings);
+    if (time) preferences.time = parseInt(time);
+
+    // Show loaders in both tabs
+    showLoader('resultsContent');
+    showLoader('recipesContent');
+    switchTabById('results');
+
+    try {
+      const res = await fetch('/api/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients, preferences })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
+      lastResults = data;
+      renderAIResponse(data);
+      renderRecipeCards(data);
+      showToast('Recipes found! IBM Granite has spoken. 🍳', 'success');
+    } catch (err) {
+      document.getElementById('resultsContent').innerHTML =
+        `<div class="placeholder"><div class="placeholder-icon">❌</div><h3>Error</h3><p>${err.message}</p></div>`;
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Find Recipes with IBM Granite AI';
+    }
+  }
+
+  function showLoader(id) {
+    document.getElementById(id).innerHTML =
+      `<div class="loader-wrap"><div class="spinner"></div> Querying IBM WatsonX Granite AI…</div>`;
+  }
+
+  // =====================================================================
+  // RENDER AI RESPONSE
+  // =====================================================================
+  function renderAIResponse(data) {
+    const c = document.getElementById('resultsContent');
+    c.innerHTML = `
+      <div class="ai-response-wrap">
+        <div class="ai-badge">IBM Granite AI · RAG Response</div>
+        <div class="ai-text">${escHtml(data.ai_response)}</div>
+      </div>
+      ${data.top_recipe ? `
+      <div style="margin-top:16px;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:6px;">BEST MATCH</div>
+        <div style="font-weight:700;">${escHtml(data.top_recipe.name)}</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:3px;">
+          ${data.top_recipe.cuisine} · ${data.top_recipe.difficulty} · 
+          Prep: ${data.top_recipe.prep_time} · Cook: ${data.top_recipe.cook_time}
+        </div>
+        ${data.top_recipe.ingredient_match ? `
+        <div style="margin-top:8px;font-size:0.8rem;">
+          <span style="color:var(--green);">✓ ${data.top_recipe.ingredient_match.matched.length} ingredients matched</span>
+          ${data.top_recipe.ingredient_match.missing.length ?
+            `<span style="color:var(--muted);margin-left:12px;">✗ Missing: ${data.top_recipe.ingredient_match.missing.slice(0,3).join(', ')}</span>` : ''}
+        </div>` : ''}
+      </div>` : ''}
+    `;
+  }
+
+  // =====================================================================
+  // RENDER RECIPE CARDS
+  // =====================================================================
+  function renderRecipeCards(data) {
+    const c = document.getElementById('recipesContent');
+    if (!data.recipes || data.recipes.length === 0) {
+      c.innerHTML = `<div class="placeholder"><div class="placeholder-icon">🤷</div>
+        <h3>No matching recipes found</h3>
+        <p>Try different ingredients or broaden your preferences.</p></div>`;
+      return;
+    }
+    c.innerHTML = `
+      <div style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;">
+        ${data.recipes.length} recipes retrieved via semantic search · ranked by ingredient match
+      </div>
+      <div class="recipe-cards">
+        ${data.recipes.map((r, i) => buildRecipeCard(r, i)).join('')}
+      </div>`;
+  }
+
+  function buildRecipeCard(r, idx) {
+    const match = r.ingredient_match || {};
+    const pct = match.match_percentage || 0;
+    const matchClass = pct >= 70 ? 'match-high' : pct >= 40 ? 'match-mid' : 'match-low';
+    const dietary = (r.dietary || []).slice(0, 3).map(d =>
+      `<span class="meta-pill">${d}</span>`).join('');
+    const matchedIngrs = (match.matched || []).map(i =>
+      `<span class="ing-tag have">✓ ${i}</span>`).join('');
+    const missingIngrs = (match.missing || []).map(i =>
+      `<span class="ing-tag missing">✗ ${i}</span>`).join('');
+    const steps = (r.instructions || []).map(s =>
+      `<li>${escHtml(s)}</li>`).join('');
+    const subs = r.substitutions || {};
+    const subsHtml = Object.entries(subs).slice(0, 4).map(([k, v]) =>
+      `<div class="sub-item"><strong>${escHtml(k)}:</strong><br>${escHtml(v)}</div>`).join('');
+    const nut = r.nutrition || {};
+
+    return `
+    <div class="recipe-card">
+      <div class="recipe-card-header" onclick="toggleCard('rc-${idx}')">
+        <div>
+          <div class="recipe-card-title">${escHtml(r.name)}</div>
+          <div class="recipe-card-meta">
+            <span class="meta-pill ${matchClass}">🎯 ${pct}% match</span>
+            <span class="meta-pill">🌍 ${escHtml(r.cuisine)}</span>
+            <span class="meta-pill">⏱ ${escHtml(r.prep_time)} prep</span>
+            <span class="meta-pill">🍳 ${escHtml(r.cook_time)} cook</span>
+            <span class="meta-pill">📊 ${escHtml(r.difficulty)}</span>
+            ${dietary}
+          </div>
+        </div>
+        <span style="color:var(--muted);font-size:1.1rem;">▾</span>
+      </div>
+      <div class="recipe-card-body" id="rc-${idx}">
+        <div class="recipe-section-title">Ingredient Match</div>
+        <div class="ingredient-list">
+          ${matchedIngrs}${missingIngrs}
+        </div>
+
+        <div class="recipe-section-title">Instructions</div>
+        <ol class="instructions-list">${steps}</ol>
+
+        ${r.tips ? `
+        <div class="recipe-section-title">Pro Tip</div>
+        <div class="tips-box">💡 ${escHtml(r.tips)}</div>` : ''}
+
+        ${Object.keys(subs).length ? `
+        <div class="recipe-section-title">Substitutions</div>
+        <div class="sub-grid">${subsHtml}</div>` : ''}
+
+        ${nut.calories ? `
+        <div class="recipe-section-title">Nutrition (per serving)</div>
+        <div class="nutrition-grid">
+          <div class="nut-box"><div class="nut-value">${nut.calories}</div><div class="nut-label">kcal</div></div>
+          <div class="nut-box"><div class="nut-value">${nut.protein}</div><div class="nut-label">protein</div></div>
+          <div class="nut-box"><div class="nut-value">${nut.carbs}</div><div class="nut-label">carbs</div></div>
+          <div class="nut-box"><div class="nut-value">${nut.fat}</div><div class="nut-label">fat</div></div>
+        </div>` : ''}
+
+        <div class="recipe-actions">
+          <button class="btn btn-secondary btn-sm" onclick="prefillSubTool('${escHtml(r.name)}')">
+            🔄 Get Substitution
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="prefillTipsTool('${escHtml(r.name)}')">
+            💡 Cooking Tips
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="prefillAdjTool('${escHtml(r.id)}')">
+            🥗 Adjust Diet
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function toggleCard(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+  }
+
+  // =====================================================================
+  // TOOLS
+  // =====================================================================
+  async function getSubstitution() {
+    const ing = document.getElementById('subIngredient').value.trim();
+    const recipe = document.getElementById('subRecipeName').value.trim();
+    const ctx = document.getElementById('subContext').value.trim();
+    const result = document.getElementById('subResult');
+    if (!ing || !recipe) { showToast('Fill in ingredient and recipe name', 'error'); return; }
+    result.textContent = 'Asking IBM Granite…';
+    result.classList.add('visible');
+    try {
+      const res = await fetch('/api/substitution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredient: ing, recipe_name: recipe, context: ctx })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      result.textContent = data.substitutions;
+    } catch (e) {
+      result.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function getCookingTips() {
+    const recipe = document.getElementById('tipsRecipeName').value.trim();
+    const tech = document.getElementById('tipsTechnique').value.trim();
+    const result = document.getElementById('tipsResult');
+    if (!recipe) { showToast('Enter a recipe name', 'error'); return; }
+    result.textContent = 'Asking IBM Granite…';
+    result.classList.add('visible');
+    try {
+      const res = await fetch('/api/tips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_name: recipe, technique: tech })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      result.textContent = data.tips;
+    } catch (e) {
+      result.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function getDietaryAdjust() {
+    const id = document.getElementById('adjRecipeId').value.trim();
+    const diet = document.getElementById('adjDietary').value.trim();
+    const result = document.getElementById('adjResult');
+    if (!id || !diet) { showToast('Fill in recipe ID and dietary requirement', 'error'); return; }
+    result.textContent = 'Asking IBM Granite…';
+    result.classList.add('visible');
+    try {
+      const res = await fetch('/api/dietary-adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: id, dietary_requirement: diet })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      result.textContent = data.adjustment;
+    } catch (e) {
+      result.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  // =====================================================================
+  // PREFILL TOOLS FROM RECIPE CARD
+  // =====================================================================
+  function prefillSubTool(recipeName) {
+    document.getElementById('subRecipeName').value = recipeName;
+    switchTabById('tools');
+  }
+  function prefillTipsTool(recipeName) {
+    document.getElementById('tipsRecipeName').value = recipeName;
+    switchTabById('tools');
+  }
+  function prefillAdjTool(recipeId) {
+    document.getElementById('adjRecipeId').value = recipeId;
+    switchTabById('tools');
+  }
+
+  // =====================================================================
+  // TABS
+  // =====================================================================
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+  function switchTabById(name) {
+    const btn = document.querySelector(`.tab-btn[onclick*="'${name}'"]`);
+    if (btn) switchTab(name, btn);
+  }
+
+  // =====================================================================
+  // STATUS & CONFIG
+  // =====================================================================
+  async function checkStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      const badge = document.getElementById('statusBadge');
+      const notice = document.getElementById('configNotice');
+
+      if (data.ibm_api_key_set && data.watsonx_project_id_set) {
+        badge.textContent = '● IBM Connected';
+        badge.className = 'badge badge-status';
+        notice.style.display = 'none';
+      } else {
+        badge.textContent = '● Config Needed';
+        badge.className = 'badge badge-status offline';
+        notice.style.display = 'block';
+      }
+
+      document.getElementById('configStatus').innerHTML = `
+        <div class="config-row">
+          <span class="config-key">IBM API Key</span>
+          <span class="config-val ${data.ibm_api_key_set ? 'dot-green' : 'dot-red'}">
+            ${data.ibm_api_key_set ? '✓ Set' : '✗ Not set'}
+          </span>
+        </div>
+        <div class="config-row">
+          <span class="config-key">WatsonX Project ID</span>
+          <span class="config-val ${data.watsonx_project_id_set ? 'dot-green' : 'dot-red'}">
+            ${data.watsonx_project_id_set ? '✓ Set' : '✗ Not set'}
+          </span>
+        </div>
+        <div class="config-row">
+          <span class="config-key">Granite Model</span>
+          <span class="config-val" style="color:var(--granite)">${data.granite_model}</span>
+        </div>
+        <div class="config-row">
+          <span class="config-key">WatsonX URL</span>
+          <span class="config-val" style="font-size:0.72rem">${data.watsonx_url}</span>
+        </div>
+        <div class="config-row">
+          <span class="config-key">RAG Top-K</span>
+          <span class="config-val">${data.rag_top_k}</span>
+        </div>
+      `;
+    } catch (e) {
+      document.getElementById('statusBadge').textContent = '● Offline';
+      document.getElementById('statusBadge').className = 'badge badge-status offline';
+    }
+  }
+
+  // =====================================================================
+  // TOAST
+  // =====================================================================
+  function showToast(msg, type = '') {
+    const wrap = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    wrap.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  // =====================================================================
+  // UTILS
+  // =====================================================================
+  function escHtml(s) {
+    if (typeof s !== 'string') return String(s || '');
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // =====================================================================
+  // INIT
+  // =====================================================================
+  checkStatus();
+</script>
+</body>
+</html>
